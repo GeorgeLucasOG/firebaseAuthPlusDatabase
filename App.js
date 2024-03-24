@@ -1,13 +1,18 @@
 import React, { useEffect, useState } from "react";
-import {View, Text, StyleSheet, TextInput, Button, Alert} from "react-native";
+import {View, Text, StyleSheet, TextInput, Button, FlatList, ActivityIndicator} from "react-native";
 import firebase from "./src/firebaseConnection";
+import Listagem from "./src/Listagem";
 
 //comando para desativar advertências em amarelo no emulador
 console.disableYellowBox=true;
 
 export default function App() {
-  const [nome, setNome] = useState('Carregamento...');
+  const [nome, setNome] = useState('');
   const [cargo, setCargo] = useState('');
+  const [usuarios, setUsuarios] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+
 
   useEffect(() => {
 
@@ -51,8 +56,26 @@ export default function App() {
       // .update({
       //   nome: 'José Augusto'
       // })
-    }
 
+      await firebase.database().ref('usuarios').on('value', (snapshot) => {
+        //seta o array como vazio
+        setUsuarios([]);
+        //busca todos os nós do banco e armazena em data
+        snapshot.forEach((childItem) => {
+          let data ={
+            key: childItem.key,
+            nome: childItem.val().nome,
+            cargo: childItem.val().cargo,
+          };
+
+          //popula o array com dados do data na ordem de cadastro.
+          //é possível inverter a saída da ordem apresebtada se após o ']' for acrecentado '.reverse()'
+          setUsuarios(oldArray => [...oldArray, data]);
+        })
+
+        setLoading(false);
+      })
+    }
     dados();
 
   },[]);
@@ -99,7 +122,21 @@ export default function App() {
       title="Novo Funcionário"
       onPress={cadastrar}
       />
-    </View>    
+
+      {loading ?(
+        <ActivityIndicator size={45} color="#121212" />
+      ):
+      (
+        <FlatList
+        keyExtractor={item => item.key}
+        data={usuarios}
+        renderItem={ ({item}) => ( <Listagem data={item} /> )}
+        />
+      )
+      }
+
+      
+    </View>
   );
 }
 
